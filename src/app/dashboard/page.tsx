@@ -136,7 +136,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <FolderOpen className="h-5 w-5" />
-              <span>Your Life Categories!!</span>
+              <span>Your Life Categories!!!!</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
