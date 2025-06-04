@@ -9,6 +9,7 @@ import { TodaySection } from '@/components/dashboard/today-section'
 import { UpcomingSection } from '@/components/dashboard/upcoming-section'
 // // import { WelcomeTour } from '@/components/onboarding/welcome-tour'
 import { format } from 'date-fns'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const user = await requireAuth()
@@ -144,19 +145,22 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {categories?.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
+                <Link 
+                  key={category.id} 
+                  href={`/dashboard/${category.name.toLowerCase()}`}
+                  className="block"
                 >
-                  <span className="text-lg">{category.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{category.name}</div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer">
+                    <span className="text-lg">{category.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{category.name}</div>
+                    </div>
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color || '#6366f1' }}
+                    />
                   </div>
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: category.color || '#6366f1' }}
-                  />
-                </div>
+                </Link>
               ))}
             </div>
           </CardContent>

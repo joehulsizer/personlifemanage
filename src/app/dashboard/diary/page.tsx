@@ -236,8 +236,8 @@ export default async function DiaryPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-                  <div key={day} className="p-2 font-medium text-gray-500">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <div key={`day-${index}`} className="p-2 font-medium text-gray-500">
                     {day}
                   </div>
                 ))}
