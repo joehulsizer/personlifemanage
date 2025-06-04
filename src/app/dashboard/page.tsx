@@ -55,6 +55,8 @@ export default async function DashboardPage() {
 
   // Fetch upcoming items (next 7 days)
   const nextWeek = format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')
+  const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd')
+
   const { data: upcomingTasks } = await supabase
     .from('tasks')
     .select(`
@@ -62,7 +64,7 @@ export default async function DashboardPage() {
       categories (name, icon, color)
     `)
     .eq('user_id', user.id)
-    .gt('due_date', format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'))
+    .gte('due_date', tomorrow)
     .lte('due_date', nextWeek)
     .eq('status', 'pending')
     .order('due_date')
@@ -75,7 +77,7 @@ export default async function DashboardPage() {
       categories (name, icon, color)
     `)
     .eq('user_id', user.id)
-    .gt('start_at', format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'))
+    .gte('start_at', tomorrow)
     .lte('start_at', nextWeek)
     .order('start_at')
     .limit(5)
