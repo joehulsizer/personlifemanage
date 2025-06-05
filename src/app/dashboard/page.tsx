@@ -83,6 +83,52 @@ export default async function DashboardPage() {
     .order('start_at')
     .limit(5)
 
+  // Calculate user streak
+  const { data: recentCompletions } = await supabase
+    .from('tasks')
+    .select('completed_at')
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(30)
+
+  const calculateStreak = (completions: any[]) => {
+    if (!completions || completions.length === 0) return 0
+    
+    let streak = 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    // Check if there's a completion today or yesterday
+    const mostRecent = new Date(completions[0].completed_at)
+    mostRecent.setHours(0, 0, 0, 0)
+    
+    let checkDate = new Date(today)
+    
+    // If no completion today, start from yesterday
+    if (mostRecent.getTime() !== today.getTime()) {
+      checkDate.setDate(checkDate.getDate() - 1)
+    }
+    
+    // Count consecutive days with completions
+    for (let completion of completions) {
+      const completionDate = new Date(completion.completed_at)
+      completionDate.setHours(0, 0, 0, 0)
+      
+      if (completionDate.getTime() === checkDate.getTime()) {
+        streak++
+        checkDate.setDate(checkDate.getDate() - 1)
+      } else if (completionDate.getTime() < checkDate.getTime()) {
+        break
+      }
+    }
+    
+    return streak
+  }
+
+  const userStreak = calculateStreak(recentCompletions || [])
+
   const userName = profile?.name || user.email?.split('@')[0] || 'there'
   const greeting = getGreeting()
 
@@ -111,7 +157,7 @@ export default async function DashboardPage() {
           <div className="flex items-center space-x-2">
             <Badge variant="secondary" className="flex items-center space-x-1">
               <Zap className="h-3 w-3" />
-              <span>Streak: 1 day</span>
+              <span>Streak: {userStreak} day{userStreak !== 1 ? 's' : ''}</span>
             </Badge>
           </div>
         </div>
