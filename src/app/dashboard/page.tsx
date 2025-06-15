@@ -29,13 +29,8 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .order('name')
 
-  // Use consistent date formatting to avoid timezone issues
-  const now = new Date()
-  const today = format(now, 'yyyy-MM-dd')
-  const tomorrow = format(new Date(now.getTime() + 86400000), 'yyyy-MM-dd')
-  const nextWeek = format(new Date(now.getTime() + 7 * 86400000), 'yyyy-MM-dd')
-
   // Fetch today's tasks and events
+  const today = format(new Date(), 'yyyy-MM-dd')
   const { data: todayTasks } = await supabase
     .from('tasks')
     .select(`
@@ -44,7 +39,7 @@ export default async function DashboardPage() {
     `)
     .eq('user_id', user.id)
     .gte('due_date', today)
-    .lt('due_date', tomorrow)
+    .lt('due_date', format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'))
     .eq('status', 'pending')
     .order('due_date')
 
@@ -56,10 +51,13 @@ export default async function DashboardPage() {
     `)
     .eq('user_id', user.id)
     .gte('start_at', today)
-    .lt('start_at', tomorrow)
+    .lt('start_at', format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'))
     .order('start_at')
 
-  // Fetch upcoming items (next 7 days, excluding today)
+  // Fetch upcoming items (next 7 days)
+  const nextWeek = format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')
+  const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd')
+
   const { data: upcomingTasks } = await supabase
     .from('tasks')
     .select(`
@@ -139,7 +137,7 @@ export default async function DashboardPage() {
       {/* <WelcomeTour /> */}
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12">
               <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
@@ -147,7 +145,7 @@ export default async function DashboardPage() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900">
                 {greeting}, {userName}! 👋
               </h1>
               <p className="text-gray-600">
@@ -187,7 +185,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <FolderOpen className="h-5 w-5" />
-              <span>Your Life Categories</span>
+              <span>Your Life Categories!!!!</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

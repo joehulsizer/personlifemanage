@@ -1,24 +1,43 @@
-import { requireAuth } from '@/lib/auth-server'
-import { Sidebar } from '@/components/layout/sidebar'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { createServerClient } from '@/lib/supabase/server'
+import SupabaseProvider from '@/components/providers/supabase-provider'
+import { Toaster } from '@/components/ui/sonner'
 
-export default async function DashboardLayout({
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+export const metadata: Metadata = {
+  title: "Personal Life Manager",
+  description: "Comprehensive personal productivity and life management application",
+};
+
+export default async function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
-  // Ensure user is authenticated
-  await requireAuth()
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  let session = null;
+
+  try {
+    const supabase = await createServerClient();
+    const result = await supabase.auth.getSession();
+    session = result.data.session;
+  } catch (error) {
+    console.error('Error getting session:', error);
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="transition-all duration-300 ease-in-out lg:ml-64">
-        <div className="lg:hidden">
-          {/* Mobile header spacer */}
-          <div className="h-16"></div>
-        </div>
-        {children}
-      </main>
-    </div>
-  )
+    <html lang="en">
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <SupabaseProvider session={session}>
+          {children}
+          <Toaster />
+        </SupabaseProvider>
+      </body>
+    </html>
+  );
 }
