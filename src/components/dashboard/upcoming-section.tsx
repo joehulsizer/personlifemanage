@@ -7,6 +7,7 @@ import { CheckCircle2, Circle, Calendar, Clock, MapPin, ArrowRight } from 'lucid
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface Task {
   id: string
@@ -42,6 +43,7 @@ interface UpcomingSectionProps {
 
 export function UpcomingSection({ tasks, events }: UpcomingSectionProps) {
   const supabase = createClient()
+  const router = useRouter()
 
   const handleCompleteTask = async (taskId: string) => {
     try {
@@ -61,6 +63,11 @@ export function UpcomingSection({ tasks, events }: UpcomingSectionProps) {
       console.error('Error completing task:', error)
       toast.error('Failed to complete task')
     }
+  }
+
+  const handleViewAllUpcoming = () => {
+    router.push('/dashboard/tasks')
+    toast.success('Viewing all tasks!')
   }
 
   const getPriorityColor = (priority: string) => {
@@ -224,7 +231,12 @@ export function UpcomingSection({ tasks, events }: UpcomingSectionProps) {
 
         {upcomingItems.length > 0 && (
           <div className="pt-2 border-t">
-            <Button variant="ghost" size="sm" className="w-full text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full text-xs hover:bg-gray-100" 
+              onClick={handleViewAllUpcoming}
+            >
               View all upcoming items
               <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
