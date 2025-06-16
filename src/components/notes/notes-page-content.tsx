@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { FileText, Plus, Search, Tag, Calendar, Edit, X, Save, Trash2, Grid, List, Eye, MoreVertical } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, subDays, isAfter } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -133,6 +133,17 @@ export function NotesPageContent({ user, notes: initialNotes, categories, notesC
   const [isLoading, setIsLoading] = useState(false)
 
   const supabase = createClient()
+
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('notes-view-mode') as 'grid' | 'list'
+    if (savedViewMode) {
+      setViewMode(savedViewMode)
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('notes-view-mode', viewMode)
+  }, [viewMode])
 
   const filteredNotes = useMemo(() => {
     if (!searchQuery.trim()) return notes
@@ -276,6 +287,11 @@ export function NotesPageContent({ user, notes: initialNotes, categories, notesC
 
   const recentNotes = filteredNotes.slice(0, 6)
   const totalNotes = notes.length
+  
+  const thisWeekNotes = useMemo(() => {
+    const sevenDaysAgo = subDays(new Date(), 7)
+    return notes.filter(note => isAfter(parseISO(note.created_at), sevenDaysAgo))
+  }, [notes])
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -383,8 +399,8 @@ export function NotesPageContent({ user, notes: initialNotes, categories, notesC
             <div className="flex items-center space-x-2">
               <Edit className="h-5 w-5 text-purple-600" />
               <div>
-                <div className="text-2xl font-bold">{format(new Date(), 'd')}</div>
-                <div className="text-sm text-gray-600">Day of Month</div>
+                <div className="text-2xl font-bold">{thisWeekNotes.length}</div>
+                <div className="text-sm text-gray-600">This Week</div>
               </div>
             </div>
           </CardContent>
@@ -440,7 +456,7 @@ export function NotesPageContent({ user, notes: initialNotes, categories, notesC
               {filteredNotes.map((note) => (
                 <Card 
                   key={note.id} 
-                  className="hover:shadow-md transition-shadow cursor-pointer group"
+                  className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer group"
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
@@ -563,13 +579,25 @@ export function NotesPageContent({ user, notes: initialNotes, categories, notesC
                 : 'Start capturing your thoughts and ideas.'
               }
             </p>
-            <Button 
-              className="flex items-center space-x-2"
-              onClick={() => openEditor()}
-            >
-              <Plus className="h-4 w-4" />
-              <span>{searchQuery ? 'Create New Note' : 'Create Your First Note'}</span>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button 
+                className="flex items-center space-x-2"
+                onClick={() => openEditor()}
+              >
+                <Plus className="h-4 w-4" />
+                <span>{searchQuery ? 'Create New Note' : 'Create Your First Note'}</span>
+              </Button>
+              {searchQuery && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setSearchQuery('')}
+                  className="flex items-center space-x-2"
+                >
+                  <X className="h-4 w-4" />
+                  <span>Clear Search</span>
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
