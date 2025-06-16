@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { BookOpen, Calendar, Edit, Heart, Smile, ChevronLeft, ChevronRight, Save, X } from 'lucide-react'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -47,6 +47,17 @@ export function DiaryPageContent({
 
   const supabase = createClient()
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showEditor) {
+        closeEditor()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showEditor])
+
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
@@ -61,15 +72,41 @@ export function DiaryPageContent({
     return content.substring(0, maxLength) + '...'
   }
 
+  const calculateStreak = (entriesList: any[]) => {
+    let streak = 0
+    let checkDate = new Date()
+
+    while (streak < 365) {
+      const dateStr = format(checkDate, 'yyyy-MM-dd')
+      const hasEntry = entriesList.some(entry => entry.date === dateStr)
+
+      if (hasEntry) {
+        streak++
+        checkDate = subDays(checkDate, 1)
+      } else {
+        break
+      }
+    }
+    return streak
+  }
+
   const openEditor = (entry?: any, date?: string, prompt?: string) => {
-    if (entry) {
+    const targetDate = date || todayStr
+    
+    const existingEntry = entries.find(e => e.date === targetDate)
+    
+    if (existingEntry && !entry) {
+      setEditingEntry(existingEntry)
+      setEditorContent((existingEntry.content_md || '') + (prompt || ''))
+      setSelectedDate(existingEntry.date)
+    } else if (entry) {
       setEditingEntry(entry)
       setEditorContent(entry.content_md || '')
       setSelectedDate(entry.date)
     } else {
       setEditingEntry(null)
       setEditorContent(prompt || '')
-      setSelectedDate(date || todayStr)
+      setSelectedDate(targetDate)
     }
     setShowEditor(true)
   }
@@ -97,16 +134,17 @@ export function DiaryPageContent({
       }
 
       let result
-      if (editingEntry) {
-        // Update existing entry
+      
+      const existingEntry = editingEntry || entries.find(e => e.date === selectedDate)
+      
+      if (existingEntry) {
         result = await supabase
           .from('diary_entries')
           .update(entryData)
-          .eq('id', editingEntry.id)
+          .eq('id', existingEntry.id)
           .select()
           .single()
       } else {
-        // Create new entry
         result = await supabase
           .from('diary_entries')
           .insert({
@@ -117,33 +155,38 @@ export function DiaryPageContent({
           .single()
       }
 
-      if (result.error) throw result.error
+      if (result.error) {
+        console.error('Supabase error:', result.error)
+        throw result.error
+      }
 
-      // Update local state
       const updatedEntry = result.data
       setEntries(prev => {
         const filtered = prev.filter(e => e.id !== updatedEntry.id)
-        return [updatedEntry, ...filtered].sort((a, b) => 
+        const newEntries = [updatedEntry, ...filtered].sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         )
+        
+        const newStreak = calculateStreak(newEntries)
+        setCurrentStreak(newStreak)
+        
+        return newEntries
       })
 
-      // Update today's entry if it's today's date
       if (selectedDate === todayStr) {
         setTodayEntry(updatedEntry)
       }
 
-      // Update recent entries
       setRecentEntries(prev => {
         const filtered = prev.filter(e => e.id !== updatedEntry.id)
         return [updatedEntry, ...filtered].slice(0, 7)
       })
 
-      toast.success(editingEntry ? 'Entry updated!' : 'Entry saved!')
+      toast.success(existingEntry ? 'Entry updated!' : 'Entry saved!')
       closeEditor()
     } catch (error) {
       console.error('Error saving entry:', error)
-      toast.error('Failed to save entry')
+      toast.error(`Failed to save entry: ${error.message || 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }
@@ -152,7 +195,7 @@ export function DiaryPageContent({
   const saveMood = async (mood: string) => {
     setSelectedMood(mood)
     toast.success(`Mood recorded: ${mood}`)
-    // You could save mood to a separate moods table or as metadata
+    // Mood is now just stored in local state - no database persistence needed for now
   }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -209,7 +252,6 @@ export function DiaryPageContent({
         </div>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -263,7 +305,6 @@ export function DiaryPageContent({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Entry */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -316,7 +357,6 @@ export function DiaryPageContent({
             </CardContent>
           </Card>
 
-          {/* Recent Entries */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -357,9 +397,7 @@ export function DiaryPageContent({
           </Card>
         </div>
 
-        {/* Calendar and Quick Actions */}
         <div className="space-y-6">
-          {/* Mini Calendar */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -413,7 +451,6 @@ export function DiaryPageContent({
             </CardContent>
           </Card>
 
-          {/* Mood Tracker */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -427,7 +464,11 @@ export function DiaryPageContent({
                   <Button
                     key={mood.label}
                     variant={selectedMood === mood.value ? "default" : "outline"}
-                    className="h-16 flex-col space-y-1"
+                    className={`h-16 flex-col space-y-1 transition-all ${
+                      selectedMood === mood.value 
+                        ? 'ring-2 ring-offset-2 ring-blue-500 bg-blue-600 text-white transform scale-105' 
+                        : 'hover:scale-105'
+                    }`}
                     onClick={() => saveMood(mood.value)}
                   >
                     <span className="text-2xl">{mood.emoji}</span>
@@ -438,7 +479,6 @@ export function DiaryPageContent({
             </CardContent>
           </Card>
 
-          {/* Writing Prompts */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -462,7 +502,6 @@ export function DiaryPageContent({
         </div>
       </div>
 
-      {/* Editor Modal */}
       {showEditor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden">
