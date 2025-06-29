@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Calendar, Users, Video, Phone, Clock, Plus, MapPin, Mail, Search, 
   Edit3, Trash2, FileText, CheckSquare, UserPlus, ExternalLink,
-  Settings, Filter, MoreVertical, Copy, Share, Bell
+  Settings, Filter, MoreVertical, Copy, Share, Bell, Download
 } from 'lucide-react'
 import { format, parseISO, isToday, isTomorrow, isThisWeek, isPast, isFuture } from 'date-fns'
 import { toast } from 'sonner'
@@ -429,6 +429,37 @@ const buildMeetingDescription = (parts: { base: string; attendees: string; agend
     const meetingLink = `${window.location.origin}/dashboard/meetings?meeting=${meeting.id}`
     navigator.clipboard.writeText(meetingLink)
     toast.success('Meeting link copied to clipboard!')
+  }
+  const downloadICS = (meeting: Meeting) => {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    }
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      `UID:${meeting.id}`,
+      `SUMMARY:${meeting.title}`,
+      `DTSTART:${formatDate(meeting.start_at)}`,
+      `DTEND:${formatDate(meeting.end_at)}`,
+      meeting.location ? `LOCATION:${meeting.location}` : '',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ]
+      .filter(Boolean)
+      .join('\r\n')
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${meeting.title.replace(/\s+/g, '_')}.ics`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast.success('ICS file generated!')
   }
 
   // Format time helpers
@@ -1505,7 +1536,7 @@ const buildMeetingDescription = (parts: { base: string; attendees: string; agend
 
               <div className="border-t pt-4">
                 <Label className="text-sm font-medium text-gray-700">Quick Actions</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-2">
                   <Button variant="outline" size="sm" onClick={() => startVideoCall(selectedMeeting)}>
                     <Video className="h-4 w-4 mr-1" />
                     Join Video
@@ -1517,6 +1548,10 @@ const buildMeetingDescription = (parts: { base: string; attendees: string; agend
                   <Button variant="outline" size="sm" onClick={() => sendEmail(selectedMeeting)}>
                     <Mail className="h-4 w-4 mr-1" />
                     Email
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadICS(selectedMeeting)}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Add to Calendar
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => copyMeetingLink(selectedMeeting)}>
                     <Share className="h-4 w-4 mr-1" />
