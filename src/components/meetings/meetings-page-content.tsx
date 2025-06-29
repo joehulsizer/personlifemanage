@@ -88,6 +88,51 @@ export function MeetingsPageContent({
   // Selected meeting for detailed view
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
 
+  // Agenda builder state
+  const [selectedAgendaMeetingId, setSelectedAgendaMeetingId] = useState('')
+  const [agendaItems, setAgendaItems] = useState<string[]>([])
+  const [newAgendaItem, setNewAgendaItem] = useState('')
+
+  useEffect(() => {
+    if (!selectedAgendaMeetingId) {
+      setAgendaItems([])
+      return
+    }
+    const meeting = meetings.find(m => m.id === selectedAgendaMeetingId)
+    if (meeting) {
+      const parsed = parseMeetingDescription(meeting.description || '')
+      const items = parsed.agenda
+        ? parsed.agenda.split('\n').map(item => item.replace(/^•\s*/, '').trim()).filter(Boolean)
+        : []
+      setAgendaItems(items)
+    }
+  }, [selectedAgendaMeetingId, meetings])
+
+  const addAgendaItem = () => {
+    if (!newAgendaItem.trim()) return
+    setAgendaItems(prev => [...prev, newAgendaItem.trim()])
+    setNewAgendaItem('')
+  }
+
+  const removeAgendaItem = (index: number) => {
+    setAgendaItems(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const saveAgenda = () => {
+    if (!selectedAgendaMeetingId) return
+    const meeting = meetings.find(m => m.id === selectedAgendaMeetingId)
+    if (!meeting) return
+    const parsed = parseMeetingDescription(meeting.description || '')
+    const agendaText = agendaItems.map(item => `• ${item}`).join('\n')
+    const newDescription = buildMeetingDescription({
+      base: parsed.base,
+      attendees: parsed.attendees,
+      agenda: agendaText,
+      meeting_type: parsed.meeting_type
+    })
+    updateMeeting(meeting.id, { description: newDescription })
+  }
+
   const supabase = createClient()
 
   // Parse contact data from markdown content
@@ -109,7 +154,29 @@ export function MeetingsPageContent({
       notes: content.replace(/Email: .+\n?/gi, '').replace(/Phone: .+\n?/gi, '').replace(/Company: .+\n?/gi, '').replace(/Role: .+\n?/gi, '').trim()
     }
   }
+// Parse meeting description sections
+const parseMeetingDescription = (desc: string | null) => {
+  const base = desc?.split('\n\nAttendees:')[0] || ''
+  const attendeesMatch = desc?.match(/Attendees:\s*([\s\S]*?)(?:\n\n|$)/i)
+  const agendaMatch = desc?.match(/Agenda:\s*([\s\S]*?)(?:\n\n|$)/i)
+  const typeMatch = desc?.match(/Type:\s*([\s\S]*?)(?:\n\n|$)/i)
 
+  return {
+    base: base.trim(),
+    attendees: attendeesMatch ? attendeesMatch[1].trim() : '',
+    agenda: agendaMatch ? agendaMatch[1].trim() : '',
+    meeting_type: typeMatch ? typeMatch[1].trim() : ''
+  }
+}
+
+const buildMeetingDescription = (parts: { base: string; attendees: string; agenda: string; meeting_type: string }) => {
+  return [
+    parts.base,
+    parts.attendees ? `Attendees: ${parts.attendees}` : '',
+    parts.agenda ? `Agenda: ${parts.agenda}` : '',
+    parts.meeting_type ? `Type: ${parts.meeting_type}` : ''
+  ].filter(Boolean).join('\n\n')
+}
   // Filter and search meetings
   const filteredMeetings = meetings.filter(meeting => {
     const matchesSearch = meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -157,12 +224,12 @@ export function MeetingsPageContent({
           user_id: user.id,
           category_id: meetingsCategoryId,
           title: meetingForm.title,
-          description: [
-            meetingForm.description,
-            meetingForm.attendees ? `Attendees: ${meetingForm.attendees}` : '',
-            meetingForm.agenda ? `Agenda: ${meetingForm.agenda}` : '',
-            meetingForm.meeting_type ? `Type: ${meetingForm.meeting_type}` : ''
-          ].filter(Boolean).join('\n\n'),
+          description: buildMeetingDescription({
+            base: meetingForm.description,
+            attendees: meetingForm.attendees,
+            agenda: meetingForm.agenda,
+            meeting_type: meetingForm.meeting_type
+          }),
           start_at: startAt,
           end_at: endAt,
           location: meetingForm.location || null
@@ -459,7 +526,7 @@ export function MeetingsPageContent({
                 className="pl-10"
               />
             </div>
-            <Select value={selectedFilter} onValueChange={setSelectedFilter}>
+            <Select value={selectedFilter} onValueChange={(value: any) => setSelectedFilter(value)}>
               <SelectTrigger className="w-40">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue />
@@ -836,12 +903,46 @@ export function MeetingsPageContent({
             <CardHeader>
               <CardTitle>Meeting Agenda Planner</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Advanced agenda planning</p>
-                <p className="text-xs mt-1">Coming soon - create detailed meeting agendas</p>
-              </div>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="agenda-meeting">Select Meeting</Label>
+                <Select value={selectedAgendaMeetingId} onValueChange={setSelectedAgendaMeetingId}>
+                  <SelectTrigger id="agenda-meeting">
+                    <SelectValue placeholder="Choose meeting" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meetings.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                </div>
+
+              {selectedAgendaMeetingId && (
+                <div className="space-y-4">
+                  <div className="flex space-x-2">
+                    <Input
+                      value={newAgendaItem}
+                      onChange={(e) => setNewAgendaItem(e.target.value)}
+                      placeholder="Agenda item..."
+                    />
+                    <Button type="button" onClick={addAgendaItem}>Add</Button>
+                  </div>
+                  {agendaItems.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1">
+                      {agendaItems.map((item, idx) => (
+                        <li key={idx} className="flex items-center justify-between">
+                          <span>{item}</span>
+                          <Button variant="ghost" size="sm" onClick={() => removeAgendaItem(idx)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Button onClick={saveAgenda}>Save Agenda</Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1386,6 +1487,21 @@ export function MeetingsPageContent({
                   </div>
                 </div>
               )}
+              {(() => {
+                const agendaText = parseMeetingDescription(selectedMeeting.description || '').agenda
+                if (!agendaText) return null
+                const items = agendaText.split('\n').map(i => i.replace(/^•\s*/, '').trim()).filter(Boolean)
+                return (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Agenda</Label>
+                    <ul className="mt-1 list-disc pl-5 space-y-1 text-sm">
+                      {items.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
 
               <div className="border-t pt-4">
                 <Label className="text-sm font-medium text-gray-700">Quick Actions</Label>
