@@ -8,6 +8,8 @@ import { CheckSquare, Filter, Calendar, AlertCircle, Clock, Plus, List, Kanban }
 import { TasksKanban } from '@/components/tasks/tasks-kanban'
 import { TasksList } from '@/components/tasks/tasks-list'
 import { TasksQuickAdd } from '@/components/tasks/tasks-quick-add'
+import { TasksFilters, TaskFiltersState } from '@/components/tasks/tasks-filters'
+import { parseISO, isBefore, startOfDay, isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns'
 
 interface TasksPageContentProps {
   tasks: any[]
@@ -36,7 +38,46 @@ export function TasksPageContent({
 }: TasksPageContentProps) {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [showNewTaskModal, setShowNewTaskModal] = useState(false)
+  const [filters, setFilters] = useState<TaskFiltersState>({
+    status: 'all',
+    due: 'all',
+    priority: 'all',
+    category: 'all'
+  })
 
+  const filteredTasks = tasks.filter(task => {
+    if (filters.status !== 'all' && task.status !== filters.status) {
+      return false
+    }
+
+    if (filters.priority !== 'all' && task.priority !== filters.priority) {
+      return false
+    }
+
+    if (filters.category !== 'all' && task.categories?.name !== filters.category) {
+      return false
+    }
+
+    if (filters.due !== 'all') {
+      if (!task.due_date) return false
+      const dueDate = parseISO(task.due_date)
+      switch (filters.due) {
+        case 'overdue':
+          return isBefore(dueDate, startOfDay(new Date()))
+        case 'today':
+          return isSameDay(dueDate, new Date())
+        case 'week':
+          return isWithinInterval(dueDate, {
+            start: startOfWeek(new Date()),
+            end: endOfWeek(new Date())
+          })
+        default:
+          return true
+      }
+    }
+
+    return true
+  })
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -74,15 +115,16 @@ export function TasksPageContent({
 
       {/* Quick Add */}
       <TasksQuickAdd categories={categories || []} />
-
-      {/* Stats Overview */}
+{/* Filters */}
+<TasksFilters categories={categories || []} onChange={setFilters} />
+      {/* Stats Overview update with filters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-orange-600" />
               <div>
-                <div className="text-2xl font-bold">{pendingTasks.length}</div>
+                <div className="text-2xl font-bold">{filteredTasks.filter(task => task.status === 'pending').length}</div>
                 <div className="text-sm text-gray-600">Pending</div>
               </div>
             </div>
@@ -94,7 +136,7 @@ export function TasksPageContent({
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-blue-600" />
               <div>
-                <div className="text-2xl font-bold">{inProgressTasks.length}</div>
+                <div className="text-2xl font-bold">{filteredTasks.filter(task => task.status === 'in_progress').length}</div>
                 <div className="text-sm text-gray-600">In Progress</div>
               </div>
             </div>
@@ -106,7 +148,7 @@ export function TasksPageContent({
             <div className="flex items-center space-x-2">
               <CheckSquare className="h-5 w-5 text-green-600" />
               <div>
-                <div className="text-2xl font-bold">{completedTasks.length}</div>
+                <div className="text-2xl font-bold">{filteredTasks.filter(task => task.status === 'completed').length}</div>
                 <div className="text-sm text-gray-600">Completed</div>
               </div>
             </div>
@@ -118,7 +160,7 @@ export function TasksPageContent({
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-red-600" />
               <div>
-                <div className="text-2xl font-bold">{overdueTasks.length}</div>
+                <div className="text-2xl font-bold">{filteredTasks.filter(task => task.status === 'overdue').length}</div>
                 <div className="text-sm text-gray-600">Overdue</div>
               </div>
             </div>
@@ -130,7 +172,7 @@ export function TasksPageContent({
             <div className="flex items-center space-x-2">
               <Filter className="h-5 w-5 text-purple-600" />
               <div>
-                <div className="text-2xl font-bold">{Object.keys(tasksByCategory).length}</div>
+                <div className="text-2xl font-bold">{Object.keys(filteredTasks.filter(task => task.status === 'completed')).length}</div>
                 <div className="text-sm text-gray-600">Categories</div>
               </div>
             </div>
@@ -144,12 +186,12 @@ export function TasksPageContent({
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center space-x-2">
               <div className="h-3 w-3 bg-red-500 rounded-full"></div>
-              <span>High Priority ({highPriorityTasks.length})</span>
+              <span>High Priority ({filteredTasks.filter(task => task.priority === 'high').length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {highPriorityTasks.slice(0, 3).map((task) => (
+              {filteredTasks.filter(task => task.priority === 'high').slice(0, 3).map((task) => (
                 <div key={task.id} className="text-sm p-2 bg-red-50 rounded border-l-2 border-red-500">
                   <div className="font-medium">{task.title}</div>
                   {task.categories && (
@@ -159,9 +201,9 @@ export function TasksPageContent({
                   )}
                 </div>
               ))}
-              {highPriorityTasks.length > 3 && (
+              {filteredTasks.filter(task => task.priority === 'high').length > 3 && (
                 <div className="text-xs text-gray-500 text-center pt-2">
-                  +{highPriorityTasks.length - 3} more
+                  +{filteredTasks.filter(task => task.priority === 'high').length - 3} more
                 </div>
               )}
             </div>
@@ -172,12 +214,12 @@ export function TasksPageContent({
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center space-x-2">
               <div className="h-3 w-3 bg-yellow-500 rounded-full"></div>
-              <span>Medium Priority ({mediumPriorityTasks.length})</span>
+              <span>Medium Priority ({filteredTasks.filter(task => task.priority === 'medium').length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {mediumPriorityTasks.slice(0, 3).map((task) => (
+              {filteredTasks.filter(task => task.priority === 'medium').slice(0, 3).map((task) => (
                 <div key={task.id} className="text-sm p-2 bg-yellow-50 rounded border-l-2 border-yellow-500">
                   <div className="font-medium">{task.title}</div>
                   {task.categories && (
@@ -255,9 +297,9 @@ export function TasksPageContent({
         </CardHeader>
         <CardContent>
           {viewMode === 'kanban' ? (
-            <TasksKanban tasks={tasks || []} />
+            <TasksKanban tasks={filteredTasks || []} />
           ) : (
-            <TasksList tasks={tasks || []} />
+            <TasksList tasks={filteredTasks || []} />
           )}
         </CardContent>
       </Card>
