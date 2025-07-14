@@ -176,8 +176,6 @@ export function WorkQuickAdd({ categoryId }: WorkQuickAddProps) {
       setInput('')
       setSelectedType(null)
 
-      // Refresh the page to show new data
-      window.location.reload()
 
     } catch (error) {
       console.error('Error adding work item:', error)

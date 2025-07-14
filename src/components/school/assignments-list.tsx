@@ -38,7 +38,6 @@ export function AssignmentsList({ assignments, showAll = false }: AssignmentsLis
       if (error) throw error
 
       toast.success('Assignment completed!')
-      window.location.reload()
     } catch (error) {
       console.error('Error completing assignment:', error)
       toast.error('Failed to complete assignment')

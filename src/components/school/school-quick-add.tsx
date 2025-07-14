@@ -147,8 +147,6 @@ export function SchoolQuickAdd({ categoryId }: SchoolQuickAddProps) {
       setInput('')
       setSelectedType(null)
 
-      // Refresh the page to show new data
-      window.location.reload()
 
     } catch (error) {
       console.error('Error adding school item:', error)
