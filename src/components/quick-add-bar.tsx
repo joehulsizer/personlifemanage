@@ -335,8 +335,7 @@ export function QuickAddBar({ categories }: QuickAddBarProps) {
       setSelectedType(null)
       setParsedPreview(null)
 
-      // Refresh the page to show new data
-      window.location.reload()
+      // window.location.reload()
 
     } catch (error) {
       console.error('Error adding item:', error)

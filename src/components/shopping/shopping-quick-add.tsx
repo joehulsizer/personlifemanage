@@ -136,8 +136,7 @@ export function ShoppingQuickAdd({ categoryId }: ShoppingQuickAddProps) {
       setInput('')
       setSelectedType(null)
 
-      // Refresh the page to show new data
-      window.location.reload()
+      // window.location.reload() - removed for performance improvement
 
     } catch (error) {
       console.error('Error adding shopping item:', error)

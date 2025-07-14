@@ -38,25 +38,31 @@ interface Event {
 interface UpcomingSectionProps {
   tasks: Task[]
   events: Event[]
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void
 }
 
-export function UpcomingSection({ tasks, events }: UpcomingSectionProps) {
+export function UpcomingSection({ tasks, events, onTaskUpdate }: UpcomingSectionProps) {
   const supabase = createClient()
 
   const handleCompleteTask = async (taskId: string) => {
     try {
+      const updates = {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('tasks')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', taskId)
 
       if (error) throw error
 
+      if (onTaskUpdate) {
+        onTaskUpdate(taskId, updates)
+      }
+
       toast.success('Task completed!')
-      window.location.reload()
     } catch (error) {
       console.error('Error completing task:', error)
       toast.error('Failed to complete task')

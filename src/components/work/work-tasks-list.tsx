@@ -38,7 +38,6 @@ export function WorkTasksList({ tasks, showAll = false }: WorkTasksListProps) {
       if (error) throw error
 
       toast.success('Task completed!')
-      window.location.reload()
     } catch (error) {
       console.error('Error completing task:', error)
       toast.error('Failed to complete task')

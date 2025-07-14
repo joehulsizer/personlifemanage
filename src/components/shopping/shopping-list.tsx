@@ -35,7 +35,6 @@ export function ShoppingList({ items }: ShoppingListProps) {
       if (error) throw error
 
       toast.success('Item purchased!')
-      window.location.reload()
     } catch (error) {
       console.error('Error completing item:', error)
       toast.error('Failed to mark as purchased')

@@ -41,6 +41,7 @@ interface Task {
 
 interface TasksKanbanProps {
   tasks: Task[]
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void
 }
 
 interface DraggableTaskProps {
@@ -191,7 +192,7 @@ function DraggableTask({ task, onStatusChange }: DraggableTaskProps) {
   )
 }
 
-export function TasksKanban({ tasks }: TasksKanbanProps) {
+export function TasksKanban({ tasks, onTaskUpdate }: TasksKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const supabase = createClient()
 
@@ -217,10 +218,13 @@ export function TasksKanban({ tasks }: TasksKanbanProps) {
 
       if (error) throw error
 
+      if (onTaskUpdate) {
+        onTaskUpdate(taskId, updateData)
+      }
+
       toast.success(`✨ Task moved to ${newStatus.replace('_', ' ')}!`, {
         description: 'Task status updated successfully'
       })
-      window.location.reload()
     } catch (error) {
       console.error('Error updating task:', error)
       toast.error('Failed to update task')
