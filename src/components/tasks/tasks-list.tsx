@@ -26,34 +26,41 @@ interface Task {
 
 interface TasksListProps {
   tasks: Task[]
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void
+  onTaskDelete?: (taskId: string) => void
 }
 
-export function TasksList({ tasks }: TasksListProps) {
+export function TasksList({ tasks, onTaskUpdate, onTaskDelete }: TasksListProps) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'overdue'>('all')
   const [sortBy, setSortBy] = useState<'due_date' | 'priority' | 'created_at'>('due_date')
   const supabase = createClient()
 
-  const handleCompleteTask = async (taskId: string) => {
+  const handleCompleteTask = async (taskId: string, onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void) => {
     try {
+      const updates = {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('tasks')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', taskId)
 
       if (error) throw error
 
+      if (onTaskUpdate) {
+        onTaskUpdate(taskId, updates)
+      }
+
       toast.success('Task completed!')
-      window.location.reload()
     } catch (error) {
       console.error('Error completing task:', error)
       toast.error('Failed to complete task')
     }
   }
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = async (taskId: string, onTaskDelete?: (taskId: string) => void) => {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     try {
@@ -64,8 +71,11 @@ export function TasksList({ tasks }: TasksListProps) {
 
       if (error) throw error
 
+      if (onTaskDelete) {
+        onTaskDelete(taskId)
+      }
+
       toast.success('Task deleted!')
-      window.location.reload()
     } catch (error) {
       console.error('Error deleting task:', error)
       toast.error('Failed to delete task')
@@ -163,7 +173,7 @@ export function TasksList({ tasks }: TasksListProps) {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 rounded-full"
-                onClick={() => handleCompleteTask(task.id)}
+                onClick={() => handleCompleteTask(task.id, onTaskUpdate)}
                 disabled={task.status === 'completed'}
               >
                 {task.status === 'completed' ? (
@@ -215,7 +225,7 @@ export function TasksList({ tasks }: TasksListProps) {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                onClick={() => handleDeleteTask(task.id)}
+                onClick={() => handleDeleteTask(task.id, onTaskDelete)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

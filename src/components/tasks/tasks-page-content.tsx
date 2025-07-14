@@ -25,7 +25,7 @@ interface TasksPageContentProps {
 }
 
 export function TasksPageContent({ 
-  tasks, 
+  tasks: initialTasks, 
   categories, 
   pendingTasks, 
   inProgressTasks, 
@@ -36,7 +36,18 @@ export function TasksPageContent({
   lowPriorityTasks, 
   tasksByCategory 
 }: TasksPageContentProps) {
+  const [tasks, setTasks] = useState(initialTasks || [])
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+
+  const handleTaskUpdate = (taskId: string, updates: Partial<any>) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, ...updates } : task
+    ))
+  }
+
+  const handleTaskDelete = (taskId: string) => {
+    setTasks(prev => prev.filter(task => task.id !== taskId))
+  }
   const [showNewTaskModal, setShowNewTaskModal] = useState(false)
   const [filters, setFilters] = useState<TaskFiltersState>({
     status: 'all',
@@ -297,9 +308,9 @@ export function TasksPageContent({
         </CardHeader>
         <CardContent>
           {viewMode === 'kanban' ? (
-            <TasksKanban tasks={filteredTasks || []} />
+            <TasksKanban tasks={filteredTasks || []} onTaskUpdate={handleTaskUpdate} />
           ) : (
-            <TasksList tasks={filteredTasks || []} />
+            <TasksList tasks={filteredTasks || []} onTaskUpdate={handleTaskUpdate} onTaskDelete={handleTaskDelete} />
           )}
         </CardContent>
       </Card>
@@ -373,4 +384,4 @@ export function TasksPageContent({
       )}
     </div>
   )
-} 
+}  

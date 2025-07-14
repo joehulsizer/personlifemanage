@@ -5,8 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CalendarDays, CheckCircle2, Clock, Plus, Zap, BookOpen, Briefcase, ShoppingCart, Users, Calendar, FolderOpen, FileText, Book } from 'lucide-react'
 import { QuickAddBar } from '@/components/quick-add-bar'
-import { TodaySection } from '@/components/dashboard/today-section'
-import { UpcomingSection } from '@/components/dashboard/upcoming-section'
+import { DashboardClient } from '@/components/dashboard/dashboard-client'
 // // import { WelcomeTour } from '@/components/onboarding/welcome-tour'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -166,19 +165,12 @@ export default async function DashboardPage() {
         <QuickAddBar categories={categories || []} />
 
         {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Today Section */}
-          <TodaySection
-            tasks={todayTasks || []}
-            events={todayEvents || []}
-          />
-
-          {/* Upcoming Section */}
-          <UpcomingSection
-            tasks={upcomingTasks || []}
-            events={upcomingEvents || []}
-          />
-        </div>
+        <DashboardClient
+          todayTasks={todayTasks || []}
+          todayEvents={todayEvents || []}
+          upcomingTasks={upcomingTasks || []}
+          upcomingEvents={upcomingEvents || []}
+        />
 
         {/* Categories Overview */}
         <Card>
